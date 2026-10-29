@@ -51,7 +51,6 @@
     gap: 16px;
   }
 
-  /* SEÇÕES E CAMPOS */
   .section-card {
     background: #f8fafc;
     border: 1px solid var(--border-color);
@@ -107,7 +106,6 @@
     text-align: right;
   }
 
-  /* CHIPS E BOTÕES RÁPIDOS */
   .chips-row {
     display: flex;
     flex-wrap: wrap;
@@ -152,7 +150,6 @@
     background: #fff7ed;
   }
 
-  /* BARRA DE IMPRESSÃO (FOOTER DA SIDEBAR) */
   .sidebar-footer {
     padding: 14px 20px;
     border-top: 1px solid var(--border-color);
@@ -276,7 +273,6 @@
     margin-bottom: 0;
   }
 
-  /* O CANVAS DE 574 x 639 (Renderizado em escala legível) */
   #labelCanvas {
     width: 320px;
     height: 356px;
@@ -285,7 +281,6 @@
     border-radius: 4px;
   }
 
-  /* TOAST DE FEEDBACK */
   .toast {
     position: fixed;
     bottom: 24px;
@@ -334,7 +329,7 @@
         </select>
       </div>
       <div style="font-size: 11px; color: #16a34a; font-weight: 700; margin-top: 4px;" id="printerStatus">
-        ✓ Impressora térmica TANCA TP-650 selecionada
+        ✓ Impressora térmica TANCA TP-650 pronta
       </div>
     </div>
 
@@ -352,15 +347,15 @@
       <div class="form-group">
         <label>Tamanho da Logo:</label>
         <div class="range-row">
-          <input type="range" id="logoWidthSlider" min="300" max="540" value="490">
-          <span class="range-val" id="logoWidthVal">490px</span>
+          <input type="range" id="logoWidthSlider" min="300" max="520" value="470">
+          <span class="range-val" id="logoWidthVal">470px</span>
         </div>
       </div>
       <div class="form-group">
-        <label>Posição Vertical (Y):</label>
+        <label>Margem Superior (Respiro do Corte):</label>
         <div class="range-row">
-          <input type="range" id="logoYSlider" min="10" max="60" value="20">
-          <span class="range-val" id="logoYVal">20px</span>
+          <input type="range" id="logoYSlider" min="20" max="70" value="32">
+          <span class="range-val" id="logoYVal">32px</span>
         </div>
       </div>
     </div>
@@ -383,8 +378,8 @@
       <div class="form-group">
         <label>Tamanho da Fonte:</label>
         <div class="range-row">
-          <input type="range" id="productFontSizeSlider" min="36" max="76" value="56">
-          <span class="range-val" id="productFontSizeVal">56pt</span>
+          <input type="range" id="productFontSizeSlider" min="36" max="70" value="52">
+          <span class="range-val" id="productFontSizeVal">52pt</span>
         </div>
       </div>
     </div>
@@ -399,8 +394,8 @@
       <div class="form-group">
         <label>Tamanho do QR Code:</label>
         <div class="range-row">
-          <input type="range" id="qrSizeSlider" min="150" max="250" value="200">
-          <span class="range-val" id="qrSizeVal">200px</span>
+          <input type="range" id="qrSizeSlider" min="140" max="230" value="180">
+          <span class="range-val" id="qrSizeVal">180px</span>
         </div>
       </div>
     </div>
@@ -456,13 +451,13 @@
 <!-- ÁREA DE PRÉ-VISUALIZAÇÃO (DIREITA) -->
 <div class="preview-area">
   <div class="preview-badge">
-    <span>📐 Escala Real: Bobina 80mm (Área de Impressão 72mm x 80mm)</span>
+    <span>📐 Margens com Respiro de Segurança para Guilhotina</span>
   </div>
 
   <div class="ticket-wrapper">
-    <div class="cut-indicator">✂ Linha de corte da guilhotina</div>
+    <div class="cut-indicator">✂ Linha de corte superior</div>
     <canvas id="labelCanvas" width="574" height="639"></canvas>
-    <div class="cut-indicator cut-indicator-bottom">✂ Linha de corte da guilhotina</div>
+    <div class="cut-indicator cut-indicator-bottom">✂ Linha de corte inferior</div>
   </div>
 </div>
 
@@ -524,7 +519,6 @@ function setupSlider(sliderId, labelId, unit) {
   });
 }
 
-// DETECTA IMPRESSORAS (Se o backend local estiver ativo)
 async function loadPrinters() {
   const select = document.getElementById('printerSelect');
   const status = document.getElementById('printerStatus');
@@ -542,7 +536,6 @@ async function loadPrinters() {
         }
         select.appendChild(opt);
       });
-      // Opção de impressão pelo navegador
       const optBrowser = document.createElement('option');
       optBrowser.value = 'BROWSER';
       optBrowser.textContent = '📄 Imprimir pelo Navegador (Qualquer impressora)';
@@ -551,12 +544,10 @@ async function loadPrinters() {
       status.textContent = '✓ ' + select.value + ' pronta para impressão';
     }
   } catch (err) {
-    // Se estiver rodando no Vercel (sem backend local), avisa amigavelmente
     status.innerHTML = '🌐 Modo Web / Vercel (Pronto para visualização e download)';
   }
 }
 
-// GERA QR CODE NO CLIENTE COM ZERO DELAY
 function refreshQrCode() {
   const text = document.getElementById('qrDataInput').value || 'https://salgadosecia.online/';
   const tempDiv = document.createElement('div');
@@ -576,7 +567,6 @@ function refreshQrCode() {
   }, 50);
 }
 
-// UPLOAD DE LOGO DO CLIENTE (FileReader puro no navegador)
 function handleLogoUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -591,15 +581,15 @@ function handleLogoUpload(e) {
 
 function resetDefaultLogo() {
   currentLogoImg.src = DEFAULT_LOGO_B64;
-  document.getElementById('logoWidthSlider').value = 490;
-  document.getElementById('logoWidthVal').textContent = '490px';
-  document.getElementById('logoYSlider').value = 20;
-  document.getElementById('logoYVal').textContent = '20px';
+  document.getElementById('logoWidthSlider').value = 470;
+  document.getElementById('logoWidthVal').textContent = '470px';
+  document.getElementById('logoYSlider').value = 32;
+  document.getElementById('logoYVal').textContent = '32px';
   redrawCanvas();
   showToast('Logotipo oficial restaurado', 'success');
 }
 
-// DESENHO NO CANVAS DE 574 x 639 (203 DPI)
+// DESENHO NO CANVAS DE 574 x 639 (203 DPI) COM RESPIRO SEGURO DO CORTE
 function redrawCanvas() {
   const W = 574;
   const H = 639;
@@ -608,10 +598,10 @@ function redrawCanvas() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  // 1. Moldura externa com recuo de segurança para o corte
-  const mX = 10;
-  const mY = 10;
-  const mBottom = 22;
+  // 1. Moldura externa com recuo generoso de segurança nas pontas
+  const mX = 12;
+  const mY = 20; // 20px de respiro no topo
+  const mBottom = 34; // 34px de respiro na base para a guilhotina
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 3;
   ctx.strokeRect(mX, mY, W - mX * 2, H - mY - mBottom);
@@ -625,14 +615,14 @@ function redrawCanvas() {
     const lh = (currentLogoImg.naturalHeight / currentLogoImg.naturalWidth) * lw;
     const lx = (W - lw) / 2;
     ctx.drawImage(currentLogoImg, lx, ly, lw, lh);
-    nextY = ly + lh + 8;
+    nextY = ly + lh + 6;
   }
 
   // Linha divisória
   ctx.beginPath();
   ctx.lineWidth = 2;
-  ctx.moveTo(mX + 14, nextY);
-  ctx.lineTo(W - mX - 14, nextY);
+  ctx.moveTo(mX + 16, nextY);
+  ctx.lineTo(W - mX - 16, nextY);
   ctx.stroke();
 
   // 3. Nome do Produto (Arial Black)
@@ -643,7 +633,7 @@ function redrawCanvas() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
-  const py = nextY + 10;
+  const py = nextY + 8;
   ctx.fillText(prodName, W / 2, py);
 
   // Traços laterais elegantes
@@ -660,23 +650,23 @@ function redrawCanvas() {
 
   // 4. QR Code
   const qrSize = parseInt(document.getElementById('qrSizeSlider').value, 10);
-  const qy = py + prodFontSize + 14;
+  const qy = py + prodFontSize + 12;
   if (currentQrImg.complete && currentQrImg.naturalWidth > 0) {
     const qx = (W - qrSize) / 2;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(currentQrImg, qx, qy, qrSize, qrSize);
   }
 
-  // 5. Caixa de Validade (Moldura dupla que evita estrias térmicas)
+  // 5. Caixa de Validade (Moldura dupla limpa sem estrias)
   const valText = document.getElementById('validityInput').value.trim() || 'VÁLIDO PARA: DD/MM/AAAA';
-  const boxH = 54;
-  const boxY = H - mBottom - boxH - 12;
+  const boxH = 50;
+  const boxY = H - mBottom - boxH - 10;
 
   ctx.strokeRect(mX + 14, boxY, W - (mX + 14) * 2, boxH);
   ctx.lineWidth = 1;
   ctx.strokeRect(mX + 17, boxY + 3, W - (mX + 17) * 2, boxH - 6);
 
-  ctx.font = '900 24px "Arial Black", Arial, sans-serif';
+  ctx.font = '900 22px "Arial Black", Arial, sans-serif';
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -708,7 +698,6 @@ function setCopies(n) {
   document.getElementById('copiesInput').value = n;
 }
 
-// DOWNLOAD DA IMAGEM EM ALTA RESOLUÇÃO
 function downloadImage() {
   const link = document.createElement('a');
   const prod = document.getElementById('productNameInput').value.trim() || 'etiqueta';
@@ -718,7 +707,6 @@ function downloadImage() {
   showToast('Imagem da etiqueta baixada com sucesso!', 'success');
 }
 
-// IMPRESSÃO INTELIGENTE
 async function printLabels() {
   const btn = document.getElementById('btnPrint');
   const printer = document.getElementById('printerSelect').value;
@@ -726,7 +714,6 @@ async function printLabels() {
   const cutEach = document.getElementById('cutEachCheck').checked;
   const imageData = canvas.toDataURL('image/png');
 
-  // Se o usuário selecionou browser ou se o app está no Vercel (sem local host)
   if (printer === 'BROWSER') {
     printViaBrowser(imageData);
     return;
@@ -751,12 +738,10 @@ async function printLabels() {
     if (data.success) {
       showToast(data.message, 'success');
     } else {
-      // Fallback para impressão no browser se a impressora local não responder
       showToast('Servidor local offline. Abrindo diálogo do navegador...', 'normal');
       printViaBrowser(imageData);
     }
   } catch (err) {
-    // No Vercel sem bridge local, abre diálogo de impressão do navegador automaticamente!
     showToast('Modo Web: Abrindo janela de impressão...', 'normal');
     printViaBrowser(imageData);
   } finally {

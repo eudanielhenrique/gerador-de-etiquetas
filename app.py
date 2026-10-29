@@ -141,8 +141,10 @@ def handle_print():
                 printer.setPageSize(QPageSize(QSizeF(72.0, 80.0), QPageSize.Unit.Millimeter))
                 
             painter = QPainter(printer)
-            # Draw image onto window
-            painter.drawImage(painter.window(), qimg)
+            # Fill white background and inset image for guillotine safety margins
+            painter.fillRect(painter.window(), Qt.GlobalColor.white)
+            target_rect = painter.window().adjusted(0, 16, 0, -24)
+            painter.drawImage(target_rect, qimg)
             painter.end()
             
             if cut_each and i < copies:
