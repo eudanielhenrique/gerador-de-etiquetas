@@ -519,11 +519,13 @@ function setupSlider(sliderId, labelId, unit) {
   });
 }
 
+const API_BASE = (window.location.protocol === 'file:' || window.location.hostname !== '127.0.0.1') ? 'http://127.0.0.1:5000' : '';
+
 async function loadPrinters() {
   const select = document.getElementById('printerSelect');
   const status = document.getElementById('printerStatus');
   try {
-    const res = await fetch('/api/printers');
+    const res = await fetch(API_BASE + '/api/printers');
     const data = await res.json();
     if (data.success && data.printers.length > 0) {
       select.innerHTML = '';
@@ -724,7 +726,7 @@ async function printLabels() {
   showToast(`Enviando ${copies} etiqueta(s) para ${printer}...`, 'normal');
 
   try {
-    const res = await fetch('/api/print', {
+    const res = await fetch(API_BASE + '/api/print', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -753,17 +755,42 @@ async function printLabels() {
 function printViaBrowser(imgData) {
   const w = window.open('');
   w.document.write(`
+    <!DOCTYPE html>
     <html>
       <head>
+        <meta charset="UTF-8">
         <title>Imprimir Etiqueta</title>
         <style>
-          @page { size: 80mm auto; margin: 0; }
-          body { margin: 0; display: flex; justify-content: center; }
-          img { width: 72mm; height: auto; }
+          @page {
+            size: 72mm 80mm !important;
+            margin: 0mm !important;
+          }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          html, body {
+            width: 72mm !important;
+            height: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: #ffffff !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          img {
+            width: 72mm !important;
+            height: 80mm !important;
+            max-width: 72mm !important;
+            max-height: 80mm !important;
+            object-fit: contain !important;
+            display: block !important;
+            margin: 0 auto !important;
+            image-rendering: pixelated !important;
+          }
         </style>
       </head>
       <body>
-        <img src="${imgData}" onload="window.print(); window.close();" />
+        <img src="${imgData}" onload="setTimeout(() => { window.print(); window.close(); }, 250);" />
       </body>
     </html>
   `);
