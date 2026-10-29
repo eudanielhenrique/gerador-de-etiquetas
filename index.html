@@ -433,7 +433,7 @@
 
             <!-- CONTROLE DE LARGURA / TAMANHO -->
             <div class="form-group" id="grpSize">
-              <label>Largura / Escala:</label>
+              <label>Escala / Tamanho Proporcional:</label>
               <div class="range-row">
                 <input type="range" id="propWidthSlider" min="40" max="540" value="200" oninput="updateProp('width', parseInt(this.value)); document.getElementById('propWidthVal').textContent = this.value + 'px';">
                 <span class="range-val" id="propWidthVal">200px</span>
@@ -598,13 +598,15 @@ function loadDefaultTemplate() {
   imgLogo.onload = () => render();
   imgCache[DEFAULT_LOGO_B64] = imgLogo;
 
+  const logoAspect = 563 / 1235;
   elements.push({
     id: 'logo',
     type: 'image',
     x: (CANVAS_WIDTH - 460) / 2,
     y: 12,
     width: 460,
-    height: Math.round(460 * (563 / 1235)),
+    height: Math.round(460 * logoAspect),
+    _aspect: logoAspect,
     src: DEFAULT_LOGO_B64
   });
 
@@ -854,9 +856,41 @@ function getElementBounds(el) {
 
 // EVENTOS DE MOUSE / TOUCH ESTILO CANVA
 function setupCanvasEvents() {
+  function hitTestCorner(pt, b) {
+    const h = 12;
+    // Bottom-right corner (SE)
+    if (Math.abs(pt.x - (b.x + b.width)) <= h && Math.abs(pt.y - (b.y + b.height)) <= h) return 'se';
+    // Bottom-left corner (SW)
+    if (Math.abs(pt.x - b.x) <= h && Math.abs(pt.y - (b.y + b.height)) <= h) return 'sw';
+    // Top-right corner (NE)
+    if (Math.abs(pt.x - (b.x + b.width)) <= h && Math.abs(pt.y - b.y) <= h) return 'ne';
+    // Top-left corner (NW)
+    if (Math.abs(pt.x - b.x) <= h && Math.abs(pt.y - b.y) <= h) return 'nw';
+    return null;
+  }
+
   canvas.addEventListener('mousedown', (e) => {
     const pt = getCanvasCoord(e);
-    // Verifica se clicou em algum elemento (de cima para baixo no z-index)
+
+    // Se já tiver elemento selecionado, checa se clicou nas pontas de redimensionar
+    if (selectedIndex >= 0 && selectedIndex < elements.length) {
+      const b = getElementBounds(elements[selectedIndex]);
+      const corner = hitTestCorner(pt, b);
+      if (corner) {
+        isResizing = true;
+        resizeHandle = corner;
+        dragStartX = pt.x;
+        dragStartY = pt.y;
+        const el = elements[selectedIndex];
+        elementStartWidth = el.width || b.width;
+        elementStartHeight = el.height || b.height;
+        elementStartX = el.x;
+        elementStartY = el.y;
+        return;
+      }
+    }
+
+    // Verifica se clicou em algum elemento
     let found = -1;
     for (let i = elements.length - 1; i >= 0; i--) {
       const b = getElementBounds(elements[i]);
@@ -884,21 +918,64 @@ function setupCanvasEvents() {
   });
 
   window.addEventListener('mousemove', (e) => {
-    if (!isDragging || selectedIndex < 0) return;
     const pt = getCanvasCoord(e);
-    const dx = pt.x - dragStartX;
-    const dy = pt.y - dragStartY;
-    const el = elements[selectedIndex];
 
-    el.x = Math.round(elementStartX + dx);
-    el.y = Math.round(elementStartY + dy);
+    // Atualiza cursor de redimensionamento ao passar pelas pontas
+    if (!isDragging && !isResizing && selectedIndex >= 0 && selectedIndex < elements.length) {
+      const b = getElementBounds(elements[selectedIndex]);
+      const corner = hitTestCorner(pt, b);
+      if (corner === 'se' || corner === 'nw') canvas.style.cursor = 'nwse-resize';
+      else if (corner === 'ne' || corner === 'sw') canvas.style.cursor = 'nesw-resize';
+      else if (pt.x >= b.x && pt.x <= b.x + b.width && pt.y >= b.y && pt.y <= b.y + b.height) canvas.style.cursor = 'move';
+      else canvas.style.cursor = 'default';
+    }
 
-    render();
+    // Redimensionamento proporcional
+    if (isResizing && selectedIndex >= 0) {
+      const el = elements[selectedIndex];
+      const dx = pt.x - dragStartX;
+      const dy = pt.y - dragStartY;
+
+      let newWidth = elementStartWidth;
+      if (resizeHandle === 'se' || resizeHandle === 'ne') newWidth = Math.max(50, Math.min(CANVAS_WIDTH - 20, elementStartWidth + dx));
+      else if (resizeHandle === 'sw' || resizeHandle === 'nw') newWidth = Math.max(50, Math.min(CANVAS_WIDTH - 20, elementStartWidth - dx));
+
+      if (el.type === 'image') {
+        const cached = imgCache[el.src];
+        const aspect = el._aspect || (cached && cached.naturalWidth ? (cached.naturalHeight / cached.naturalWidth) : (el.height / el.width)) || (563 / 1235);
+        el._aspect = aspect;
+        el.width = Math.round(newWidth);
+        el.height = Math.round(newWidth * aspect);
+      } else if (el.type === 'qrcode') {
+        el.width = Math.round(newWidth);
+        el.height = Math.round(newWidth);
+      } else if (el.type === 'line' || el.type === 'box_text') {
+        el.width = Math.round(newWidth);
+      }
+
+      updatePropertiesPanel();
+      render();
+      return;
+    }
+
+    // Movimentação / Arrastar
+    if (isDragging && selectedIndex >= 0) {
+      const dx = pt.x - dragStartX;
+      const dy = pt.y - dragStartY;
+      const el = elements[selectedIndex];
+
+      el.x = Math.round(elementStartX + dx);
+      el.y = Math.round(elementStartY + dy);
+
+      render();
+    }
   });
 
   window.addEventListener('mouseup', () => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       isDragging = false;
+      isResizing = false;
+      resizeHandle = null;
       canvas.style.cursor = 'default';
     }
   });
@@ -967,9 +1044,12 @@ function updateProp(prop, val) {
   if (prop === 'text') el.text = val;
   if (prop === 'fontSize') el.fontSize = val;
   if (prop === 'width') {
-    if (el.type === 'image' && el._aspect) {
+    if (el.type === 'image') {
+      const cached = imgCache[el.src];
+      const aspect = el._aspect || (cached && cached.naturalWidth ? (cached.naturalHeight / cached.naturalWidth) : (el.height / el.width)) || (563 / 1235);
+      el._aspect = aspect;
       el.width = val;
-      el.height = Math.round(val * el._aspect);
+      el.height = Math.round(val * aspect);
     } else if (el.type === 'qrcode') {
       el.width = val;
       el.height = val;
