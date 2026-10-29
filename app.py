@@ -6,8 +6,8 @@ import io
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from PIL import Image, ImageEnhance
 import qrcode
-from PySide6.QtGui import QGuiApplication, QPageSize, QPainter, QImage
-from PySide6.QtCore import QSizeF
+from PySide6.QtGui import QGuiApplication, QPageSize, QPainter, QImage, QColor
+from PySide6.QtCore import QSizeF, Qt
 from PySide6.QtPrintSupport import QPrinter, QPrinterInfo
 
 # Ensure QGuiApplication is initialized
@@ -109,6 +109,25 @@ def upload_logo():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def print_one_label(printer_info, is_thermal, qimg, doc_name):
+    printer = QPrinter(printer_info)
+    printer.setDocName(doc_name)
+    if is_thermal:
+        printer.setResolution(203)
+        printer.setPageSize(QPageSize(QSizeF(72.0, 80.0), QPageSize.Unit.Millimeter))
+        
+    painter = QPainter()
+    try:
+        if painter.begin(printer):
+            painter.fillRect(painter.window(), Qt.GlobalColor.white)
+            target_rect = painter.window().adjusted(0, 16, 0, -24)
+            painter.drawImage(target_rect, qimg)
+    finally:
+        if painter.isActive():
+            painter.end()
+    del painter
+    del printer
+
 @app.route('/api/print', methods=['POST'])
 def handle_print():
     try:
@@ -146,21 +165,17 @@ def handle_print():
         is_thermal = any(k in printer_name.upper() for k in ['HOMOLOGACAO', 'TANCA', 'TP-', 'POS', 'RECEIPT', 'THERMAL', 'CUPOM'])
         
         for i in range(1, copies + 1):
-            printer = QPrinter(printer_info)
-            printer.setDocName(f"Etiqueta_{i}_{int(time.time())}")
-            if is_thermal:
-                printer.setResolution(203)
-                printer.setPageSize(QPageSize(QSizeF(72.0, 80.0), QPageSize.Unit.Millimeter))
-                
-            painter = QPainter(printer)
-            # Fill white background and inset image for guillotine safety margins
-            painter.fillRect(painter.window(), Qt.GlobalColor.white)
-            target_rect = painter.window().adjusted(0, 16, 0, -24)
-            painter.drawImage(target_rect, qimg)
-            painter.end()
-            
+            doc_name = f"Etiqueta_{i}_{int(time.time())}"
+            print_one_label(printer_info, is_thermal, qimg, doc_name)
             if cut_each and i < copies:
                 time.sleep(1.2)  # Pause for hardware cutter
+                
+        return jsonify({
+            'success': True,
+            'message': f"{copies} etiqueta(s) enviada(s) para '{printer_name}' com corte automático!"
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
                 
         return jsonify({
             'success': True,
