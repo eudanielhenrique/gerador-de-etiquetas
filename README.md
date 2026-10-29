@@ -1,24 +1,16 @@
-# Editor e Impressor de Etiquetas Térmicas (80mm) - Salgados & Cia
+# Gerador de Etiquetas Térmicas (80mm)
 
-Sistema completo de edição visual e impressão de etiquetas térmicas de 80mm com acionamento de corte automático (guilhotina).
+Editor visual interativo estilo **Canva** para criação, personalização e impressão direta em impressoras térmicas de 80mm com corte automático de guilhotina.
 
-## 🚀 Recursos
-- **Personalização de Logotipo**: Escolha qualquer imagem do computador e ajuste tamanho e posição em tempo real.
-- **Nome do Produto**: Edição de texto e tamanho da fonte com botões de atalho rápido.
-- **Gerador de QR Code**: Geração instantânea de QR Code para qualquer link ou texto (padrão: `https://salgadosecia.online/`).
-- **Data de Validade**: Seleção rápida de datas (+1 dia, +2 dias, +7 dias, etc.).
-- **Compatibilidade Térmica**: Otimizado para bobinas térmicas de 80mm (área de impressão 72mm x 80mm / 203 DPI) sem estrias térmicas.
-- **Controle de Impressão e Corte**: Reconhecimento automático de impressoras do Windows e acionamento de corte (guilhotina) por etiqueta.
-- **Exportação**: Baixe a etiqueta em PNG de alta resolução a qualquer momento.
+## ✨ Recursos
+- **Editor Estilo Canva**: Clique e arraste livremente qualquer elemento (textos, logos, QR codes, linhas e caixas de validade).
+- **Ajuste de Altura da Bobina**: Controle milimétrico do comprimento da etiqueta (50mm a 100mm) para eliminar sobras de papel em branco.
+- **Logotipos e Imagens**: Faça upload de qualquer logo ou imagem com redimensionamento e posicionamento livre.
+- **QR Code Dinâmico**: Gere QR Codes instantâneos para links, cardápios, PIX ou contatos.
+- **Impressão Direta sem Chrome**: Comunicação nativa com o Windows spooler a 203 DPI, acionando o corte da guilhotina após cada etiqueta sem abrir janelas distorcidas do navegador.
+- **Exportação PNG**: Baixe a etiqueta em alta resolução pronta para uso digital.
 
-## 💻 Como Rodar Localmente (com suporte à impressora física)
-1. Instale os pacotes necessários:
-```bash
-pip install flask pillow qrcode pyside6
-```
-2. Execute o servidor local:
-```bash
-python app.py
-```
-ou dê dois cliques no arquivo `iniciar_editor.bat`.
-3. Acesse `http://127.0.0.1:5000` no seu navegador.
+## 🚀 Como Usar Localmente
+1. Dê dois cliques em `iniciar_editor.bat` (ou no atalho da Área de Trabalho).
+2. Acesse `http://127.0.0.1:5000` no seu navegador.
+3. Arraste os elementos, monte sua etiqueta e clique em **"IMPRIMIR ETIQUETAS"**.

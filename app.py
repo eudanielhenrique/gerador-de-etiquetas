@@ -114,14 +114,14 @@ def print_one_label(printer_info, is_thermal, qimg, doc_name):
     printer.setDocName(doc_name)
     if is_thermal:
         printer.setResolution(203)
-        printer.setPageSize(QPageSize(QSizeF(72.0, 80.0), QPageSize.Unit.Millimeter))
+        # 68mm compact height: removes the top blank paper excess
+        printer.setPageSize(QPageSize(QSizeF(72.0, 68.0), QPageSize.Unit.Millimeter))
         
     painter = QPainter()
     try:
         if painter.begin(printer):
             painter.fillRect(painter.window(), Qt.GlobalColor.white)
-            target_rect = painter.window().adjusted(0, 16, 0, -24)
-            painter.drawImage(target_rect, qimg)
+            painter.drawImage(painter.window(), qimg)
     finally:
         if painter.isActive():
             painter.end()
@@ -151,9 +151,9 @@ def handle_print():
         img_bytes = base64.b64decode(image_b64)
         pil_img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
         
-        # Ensure exact 574 x 639 size for 203 DPI thermal head
-        if pil_img.size != (574, 639):
-            pil_img = pil_img.resize((574, 639), Image.Resampling.LANCZOS)
+        # Ensure exact 574 x 550 size for 203 DPI thermal head (68mm height)
+        if pil_img.size != (574, 550):
+            pil_img = pil_img.resize((574, 550), Image.Resampling.LANCZOS)
             
         raw_data = pil_img.tobytes('raw', 'RGB')
         qimg = QImage(raw_data, pil_img.width, pil_img.height, pil_img.width * 3, QImage.Format.Format_RGB888).copy()
