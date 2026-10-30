@@ -114,14 +114,16 @@ def print_one_label(printer_info, is_thermal, qimg, doc_name):
     printer.setDocName(doc_name)
     if is_thermal:
         printer.setResolution(203)
-        # 68mm compact height: removes the top blank paper excess
-        printer.setPageSize(QPageSize(QSizeF(72.0, 68.0), QPageSize.Unit.Millimeter))
+        # Altura exata da imagem em mm (203 DPI: 1 mm = 8 dots) + 4.0mm de avanço de corte
+        # Isso garante que a guilhotina física corte APÓS a linha de baixo sem degolar o texto 'VÁLIDO PARA'
+        h_mm = round((qimg.height() / 203.0) * 25.4 + 4.0, 1)
+        printer.setPageSize(QPageSize(QSizeF(72.0, h_mm), QPageSize.Unit.Millimeter))
         
     painter = QPainter()
     try:
         if painter.begin(printer):
             painter.fillRect(painter.window(), Qt.GlobalColor.white)
-            painter.drawImage(painter.window(), qimg)
+            painter.drawImage(0, 0, qimg)
     finally:
         if painter.isActive():
             painter.end()
@@ -151,9 +153,11 @@ def handle_print():
         img_bytes = base64.b64decode(image_b64)
         pil_img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
         
-        # Ensure exact 574 x 550 size for 203 DPI thermal head (68mm height)
-        if pil_img.size != (574, 550):
-            pil_img = pil_img.resize((574, 550), Image.Resampling.LANCZOS)
+        # Ajusta largura para 574px (71.75mm em 203 DPI) preservando a altura configurada no editor
+        if pil_img.width != 574:
+            ratio = 574.0 / pil_img.width
+            new_h = int(pil_img.height * ratio)
+            pil_img = pil_img.resize((574, new_h), Image.Resampling.LANCZOS)
             
         raw_data = pil_img.tobytes('raw', 'RGB')
         qimg = QImage(raw_data, pil_img.width, pil_img.height, pil_img.width * 3, QImage.Format.Format_RGB888).copy()

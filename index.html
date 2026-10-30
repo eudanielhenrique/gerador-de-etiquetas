@@ -475,6 +475,9 @@
     <span>🏷️</span>
     <span>Gerador de Etiquetas</span>
     <span class="nav-brand-badge">Studio</span>
+    <div class="server-status-pill" id="serverStatusBadge" style="margin-left: 12px;">
+      <span style="color:#f59e0b;">○</span> Conectando impressora local...
+    </div>
   </div>
 
   <div class="nav-actions">
@@ -564,9 +567,17 @@
             </div>
 
             <div class="form-row" id="grpFontSize">
-              <label class="field-label">Tamanho da Fonte:</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="field-label" style="margin-bottom: 0;">Tamanho da Fonte:</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <button type="button" class="btn-micro" onclick="adjustFontSize(-2)" title="Diminuir 2px">－</button>
+                  <input type="number" id="propFontSizeNum" class="dark-input" style="width: 58px; height: 26px; padding: 2px 4px; text-align: center; font-weight: 700; font-size: 13px;" min="6" max="600" value="48" oninput="onFontSizeNumInput(this.value)">
+                  <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">px</span>
+                  <button type="button" class="btn-micro" onclick="adjustFontSize(2)" title="Aumentar 2px">＋</button>
+                </div>
+              </div>
               <div class="slider-wrapper">
-                <input type="range" class="studio-slider" id="propFontSizeSlider" min="14" max="72" value="48" oninput="updateProp('fontSize', parseInt(this.value)); document.getElementById('propFontSizeVal').textContent = this.value + 'px';">
+                <input type="range" class="studio-slider" id="propFontSizeSlider" min="8" max="250" value="48" oninput="onFontSizeSliderInput(this.value)">
                 <span class="slider-readout" id="propFontSizeVal">48px</span>
               </div>
             </div>
@@ -684,6 +695,7 @@ let resizeHandle = null;
 let dragStartX = 0, dragStartY = 0;
 let elementStartX = 0, elementStartY = 0;
 let elementStartWidth = 0, elementStartHeight = 0;
+let elementStartFontSize = 40;
 
 const canvas = document.getElementById('canvaCanvas');
 const ctx = canvas.getContext('2d');
@@ -1017,6 +1029,7 @@ function setupCanvasEvents() {
         elementStartHeight = el.height || b.height;
         elementStartX = el.x;
         elementStartY = el.y;
+        elementStartFontSize = el.fontSize || 40;
         return;
       }
     }
@@ -1078,6 +1091,10 @@ function setupCanvasEvents() {
         el.height = Math.round(newWidth);
       } else if (el.type === 'line' || el.type === 'box_text') {
         el.width = Math.round(newWidth);
+      } else if (el.type === 'text') {
+        const ratio = newWidth / Math.max(20, elementStartWidth);
+        const newFontSize = Math.max(8, Math.min(500, Math.round(elementStartFontSize * ratio)));
+        el.fontSize = newFontSize;
       }
 
       updatePropertiesPanel();
@@ -1161,8 +1178,15 @@ function updatePropertiesPanel() {
 
   document.getElementById('grpFontSize').style.display = (el.type === 'text' || el.type === 'box_text') ? 'block' : 'none';
   if (el.fontSize !== undefined) {
-    document.getElementById('propFontSizeSlider').value = el.fontSize;
-    document.getElementById('propFontSizeVal').textContent = el.fontSize + 'px';
+    const slider = document.getElementById('propFontSizeSlider');
+    if (slider) {
+      if (el.fontSize > parseInt(slider.max)) slider.max = Math.max(el.fontSize, 300);
+      slider.value = el.fontSize;
+    }
+    const numInput = document.getElementById('propFontSizeNum');
+    if (numInput) numInput.value = el.fontSize;
+    const valSpan = document.getElementById('propFontSizeVal');
+    if (valSpan) valSpan.textContent = el.fontSize + 'px';
   }
 
   document.getElementById('grpSize').style.display = (el.type === 'image' || el.type === 'qrcode' || el.type === 'line' || el.type === 'box_text') ? 'block' : 'none';
@@ -1173,6 +1197,38 @@ function updatePropertiesPanel() {
 
   document.getElementById('grpQrLink').style.display = (el.type === 'qrcode') ? 'block' : 'none';
   if (el.qrData !== undefined) document.getElementById('propQrInput').value = el.qrData;
+}
+
+
+function onFontSizeSliderInput(val) {
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return;
+  updateProp('fontSize', num);
+  const numInput = document.getElementById('propFontSizeNum');
+  if (numInput) numInput.value = num;
+  const valSpan = document.getElementById('propFontSizeVal');
+  if (valSpan) valSpan.textContent = num + 'px';
+}
+
+function onFontSizeNumInput(val) {
+  const num = parseInt(val, 10);
+  if (isNaN(num) || num < 6) return;
+  updateProp('fontSize', num);
+  const slider = document.getElementById('propFontSizeSlider');
+  if (slider) {
+    if (num > parseInt(slider.max)) slider.max = Math.max(num, 300);
+    slider.value = num;
+  }
+  const valSpan = document.getElementById('propFontSizeVal');
+  if (valSpan) valSpan.textContent = num + 'px';
+}
+
+function adjustFontSize(delta) {
+  if (selectedIndex < 0) return;
+  const el = elements[selectedIndex];
+  if (!el || el.fontSize === undefined) return;
+  const newSize = Math.max(6, Math.min(600, (el.fontSize || 40) + delta));
+  onFontSizeNumInput(newSize);
 }
 
 function updateProp(prop, val) {
@@ -1395,7 +1451,17 @@ async function printLabels() {
       showToast('Erro: ' + data.error, 'error');
     }
   } catch (err) {
-    showToast('Falha na comunicação com impressora local', 'error');
+    // Fallback: se o servidor local Python não estiver rodando (ou no GitHub Pages)
+    const fallbackBox = document.getElementById('printFallbackContainer');
+    if (fallbackBox) {
+      fallbackBox.innerHTML = `<img src="${imageData}">`;
+      showToast('Servidor local offline. Abrindo diálogo do navegador...', 'normal');
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    } else {
+      showToast('Falha na comunicação com impressora local', 'error');
+    }
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span>🖨️ IMPRIMIR ETIQUETAS</span>';
@@ -1404,11 +1470,15 @@ async function printLabels() {
 
 async function loadPrinters() {
   const select = document.getElementById('printerSelect');
+  const badge = document.getElementById('serverStatusBadge');
   const API_BASE = (window.location.protocol === 'file:' || window.location.hostname !== '127.0.0.1') ? 'http://127.0.0.1:5000' : '';
   try {
     const res = await fetch(API_BASE + '/api/printers');
     const data = await res.json();
     if (data.success && data.printers.length > 0) {
+      if (badge) {
+        badge.innerHTML = '<span style="color:#10b981;">●</span> Servidor Local Conectado (Corte Milimétrico)';
+      }
       select.innerHTML = '';
       data.printers.forEach(p => {
         const opt = document.createElement('option');
@@ -1418,7 +1488,12 @@ async function loadPrinters() {
         select.appendChild(opt);
       });
     }
-  } catch (e) {}
+  } catch (e) {
+    if (badge) {
+      badge.innerHTML = '<span style="color:#f59e0b;">○</span> Servidor Local Offline (Execute python app.py)';
+    }
+    console.warn('Servidor local offline:', e);
+  }
 }
 
 function showToast(msg, type = 'normal') {
@@ -1429,5 +1504,6 @@ function showToast(msg, type = 'normal') {
 }
 </script>
 
+  <div id="printFallbackContainer" style="display: none;"></div>
 </body>
 </html>
